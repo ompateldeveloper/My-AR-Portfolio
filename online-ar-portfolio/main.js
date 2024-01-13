@@ -1,9 +1,17 @@
 import { CSS3DObject } from '../libs/three.js-r132/examples/jsm/renderers/CSS3DRenderer.js';
 import { loadGLTF, loadTexture, loadTextures, loadVideo } from '../libs/loader.js';
+
 const THREE = window.MINDAR.IMAGE.THREE;
+
+
+import { mockWithVideo } from "../libs/camera-mock.js"
+
+
 
 document.addEventListener('DOMContentLoaded', () => {
     const start = async () => {
+
+        mockWithVideo("../assets/mock-videos/previeww.mp4")
 
         // initialize MindAR 
         const mindarThree = new window.MINDAR.IMAGE.MindARThree({
@@ -15,13 +23,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const light = new THREE.HemisphereLight(0xffffff, 0xbbbbff, 1);
         scene.add(light);
 
+
+
         const [
             cardTexture,
             emailTexture,
             locationTexture,
             webTexture,
             profileTexture,
-            portfolioItem0Texture,
+            // portfolioItem0Texture,
             //   portfolioItem1Texture,
             //   portfolioItem2Texture,
         ] = await loadTextures([
@@ -30,12 +40,27 @@ document.addEventListener('DOMContentLoaded', () => {
             '../../assets/portfolio/icons/phone.png',
             '../../assets/portfolio/icons/web.png',
             '../../assets/portfolio/icons/profile.png',
-            '../../assets/portfolio/portfolio/preview1.png',
         ]);
+
+
+
+
+
+
 
         const planeGeometry = new THREE.PlaneGeometry(1, 0.552);
         const cardMaterial = new THREE.MeshBasicMaterial({ map: cardTexture });
         const card = new THREE.Mesh(planeGeometry, cardMaterial);
+
+
+        // Create a GSAP timeline for the card animation
+        const timeline = gsap.timeline();
+
+
+
+
+
+
 
         const iconGeometry = new THREE.CircleGeometry(0.075, 32);
         const emailMaterial = new THREE.MeshBasicMaterial({ map: emailTexture });
@@ -53,13 +78,35 @@ document.addEventListener('DOMContentLoaded', () => {
         portfolioItem0Video.muted = true;
         const portfolioItem0VideoTexture = new THREE.VideoTexture(portfolioItem0Video);
         const portfolioItem0VideoMaterial = new THREE.MeshBasicMaterial({ map: portfolioItem0VideoTexture });
-        const portfolioItem0Material = new THREE.MeshBasicMaterial({ map: portfolioItem0Texture });
+        // const portfolioItem0Material = new THREE.MeshBasicMaterial({ map: portfolioItem0Texture });
 
 
         const portfolioItem0V = new THREE.Mesh(planeGeometry, portfolioItem0VideoMaterial);
-        const portfolioItem0 = new THREE.Mesh(planeGeometry, portfolioItem0Material);
+        // const portfolioItem0 = new THREE.Mesh(planeGeometry, portfolioItem0Material);
         // const portfolioItem1 = new THREE.Mesh(planeGeometry, portfolioItem1Material); 
-        // const portfolioItem2 = new THREE.Mesh(planeGeometry, portfolioItem2Material); 
+        // const portfolioItem2 = new THREE.Mesh(planeGeometry, portfolioItem2Material);
+        // Set initial properties for the video
+        // console.log(portfolioItem0V)
+        const cardOverlayGeometry = new THREE.PlaneGeometry(1, 0.552);
+        const cardOverlayMaterial = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0 });
+        const cardOverlay = new THREE.Mesh(cardOverlayGeometry, cardOverlayMaterial);
+        cardOverlay.position.set(0, 0, 0.01); // Slightly above the card
+
+
+
+
+
+
+
+
+
+        // Set initial position of the video outside the view
+        portfolioItem0V.position.set(0, -10, 0);
+
+
+
+
+
 
         profileIcon.position.set(-0.42, -0.5, 0);
         webIcon.position.set(-0.14, -0.5, 0);
@@ -67,12 +114,11 @@ document.addEventListener('DOMContentLoaded', () => {
         locationIcon.position.set(0.42, -0.5, 0);
 
         const portfolioGroup = new THREE.Group();
-        portfolioGroup.position.set(0, 0, -0.01);
         portfolioGroup.position.set(0, 0.6, -0.01);
 
         // portfolioItem0V.position.set(0, 0, 0)
 
-        portfolioGroup.add(portfolioItem0);
+        // portfolioGroup.add(portfolioItem0);
         portfolioGroup.add(portfolioItem0V);
         // portfolioGroup.add(leftIcon);
         // portfolioGroup.add(rightIcon);
@@ -82,7 +128,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const avatar = await loadGLTF('../assets/models/business_card_background/scene.gltf');
         avatar.scene.scale.set(0.004, 0.004, 0.004);
         avatar.scene.position.set(0, -0.25, -0.3);
-        portfolioItem0V.position.set(0, 0.6, 0); 
+        portfolioItem0V.position.set(0, 0.6, 0);
+
+        // Create a GSAP timeline for the avatar rotation animation
+        const avatarRotationTimeline = gsap.timeline();
+        avatarRotationTimeline.to(avatar.scene.rotation, {
+            duration: 2,  // Decreased duration for a faster rotation
+            y: Math.PI * 4,  // Increase the total rotation to make it "crazier"
+            ease: "power2.out",  // Adjust easing function for a different feel
+            repeat: -1,
+            delay: 2
+        });
+
+
 
 
         const anchor = mindarThree.addAnchor(0);
@@ -94,21 +152,66 @@ document.addEventListener('DOMContentLoaded', () => {
         anchor.group.add(locationIcon);
         anchor.group.add(portfolioItem0V);
         anchor.group.add(portfolioGroup);
+        anchor.group.add(cardOverlay);
+
+        console.log(emailIcon)
+        console.log(avatar)
+        console.log(cardOverlay)
+
+
+
+
 
         anchor.onTargetFound = () => {
+
+            // Start the avatar rotation animation
+            avatarRotationTimeline.play();
+            // Initially hide the avatar
+            avatar.scene.visible = false;
+            // gsap.to(avatar.scene.position, { duration: 0, delay: 2 })
+
             portfolioItem0V.material.map.image.play();
+            gsap.from(portfolioItem0V.position, { duration: 2.5, x: 300, ease: "slow(0.7,0.7,false)", y: -250, delay: 1.5 })
+            gsap.set(card.position, { y: -10, opacity: 0 });
+            timeline.to(card.position, { duration: 1.5, y: 0, opacity: 1, ease: "back.out" });
+
+            gsap.from(
+                [webIcon.position, emailIcon.position, profileIcon.position, locationIcon.position],
+                { duration: 1, opacity: 0, y: 150, stagger: 0.25, delay: 3.2 }
+            );
+
+            // Show the avatar after the delay
+            gsap.to(avatar.scene.position, {
+                duration: 0,
+                delay: 2,
+                onComplete: () => {
+                    avatar.scene.visible = true;
+                }
+            });
+
+            // Add shine effect using GSAP
+            gsap.to(cardOverlayMaterial, { duration: 1, opacity: 0.5,backgroundColor: 0xff0000, ease: "elastic.out",onComplete: () => {
+                // Remove the cardOverlay from the scene
+                anchor.group.remove(cardOverlay)} });
+
+            // Add rotation effect using GSAP
+            gsap.to(cardOverlay.rotation, { duration: 2, y: Math.PI * 2, ease: "power2.inOut" });
         }
+
         anchor.onTargetLost = () => {
             portfolioItem0V.material.map.image.pause();
         }
+
         portfolioItem0V.material.map.image.addEventListener('play', () => {
             portfolioItem0V.material.map.image.currentTime = 1;
         });
 
 
+
+
         const textElement = document.createElement("div");
         const textObj = new CSS3DObject(textElement);
-        textObj.position.set(0, -800, 0);
+        textObj.position.set(1300, 1000, 0);
         textObj.visible = false;
         textElement.style.background = "#FFFFFF";
         textElement.style.padding = "30px";
@@ -123,10 +226,10 @@ document.addEventListener('DOMContentLoaded', () => {
         webIcon.userData.clickable = true;
         profileIcon.userData.clickable = true;
         locationIcon.userData.clickable = true;
-        portfolioItem0.userData.clickable = true;
+        // portfolioItem0.userData.clickable = true;
         portfolioItem0V.userData.clickable = true;
 
-        const portfolioItems = [portfolioItem0];
+        // const portfolioItems = [portfolioItem0];
         let currentPortfolio = 0;
 
         document.body.addEventListener('click', (e) => {
@@ -136,7 +239,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const raycaster = new THREE.Raycaster();
             raycaster.setFromCamera(mouse, camera);
             const intersects = raycaster.intersectObjects(scene.children, true);
-        
+
             if (intersects.length > 0) {
                 let o = intersects[0].object;
                 while (o.parent && !o.userData.clickable) {
@@ -160,30 +263,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         });
-        
+
+
+
 
         const clock = new THREE.Clock();
         await mindarThree.start();
         const rotationSpeed = 0.5;
 
-        // Create a quaternion to store the rotation state
-        const quaternion = new THREE.Quaternion();
+
+
 
 
 
         renderer.setAnimationLoop(() => {
-            const delta = clock.getDelta();
-            
-            // Update rotation based on time and speed
-            const rotationAngle = delta * rotationSpeed;
-            quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), rotationAngle);
 
-            // Apply the rotation to the avatar's scene
-            avatar.scene.quaternion.multiply(quaternion);
+            const delta = clock.getDelta();
+
+
+
 
 
             const elapsed = clock.getElapsedTime();
+
+
             const iconScale = 1 + 0.2 * Math.sin(elapsed * 5);
+
 
 
             [webIcon, emailIcon, profileIcon, locationIcon].forEach((icon) => {
